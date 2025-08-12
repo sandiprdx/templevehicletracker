@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:padding="16dp"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/autoInfo"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Auto info" />
+
+    <Button
+        android:id="@+id/endMeterPhotoButton"
+        android:text="End Meter Photo"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"/>
+
+    <EditText
+        android:id="@+id/manualEndKmInput"
+        android:hint="Manual End KM (optional)"
+        android:inputType="numberDecimal"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"/>
+
+    <Button
+        android:id="@+id/submitEndBtn"
+        android:text="Submit End"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"/>
+</LinearLayout>

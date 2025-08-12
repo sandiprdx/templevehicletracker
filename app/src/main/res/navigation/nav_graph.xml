@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.rxdindia.templevehicletracker.ui.HomeFragment"
+        android:label="@string/app_name">
+        <action
+            android:id="@+id/action_homeFragment_to_tripSetupFragment"
+            app:destination="@id/tripSetupFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/tripSetupFragment"
+        android:name="com.rxdindia.templevehicletracker.ui.TripSetupNewFragment"
+        android:label="@string/trip_setup">
+        <argument android:name="vehicleId" app:argType="integer"/>
+        <argument android:name="vehicleNumber" app:argType="string"/>  <!-- NEW -->
+        <action
+            android:id="@+id/action_tripSetupFragment_to_tripTrackingFragment"
+            app:destination="@id/tripTrackingFragment"/>
+    </fragment>
+
+
+    <fragment
+        android:id="@+id/tripTrackingFragment"
+        android:name="com.rxdindia.templevehicletracker.ui.TripTrackingNewFragment"
+        android:label="@string/trip_tracking">
+        <argument android:name="tripId" app:argType="integer" />
+        <action
+            android:id="@+id/action_tripTrackingFragment_to_endTripFragment"
+            app:destination="@id/endTripFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/endTripFragment"
+        android:name="com.rxdindia.templevehicletracker.ui.EndTripFragment"
+        android:label="End Trip">
+        <argument android:name="tripId" app:argType="integer" />
+        <action
+            android:id="@+id/action_endTripFragment_to_tripSummaryFragment"
+            app:destination="@id/tripSummaryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/tripSummaryFragment"
+        android:name="com.rxdindia.templevehicletracker.ui.TripSummaryFragment"
+        android:label="Trip Summary">
+        <argument android:name="tripId" app:argType="integer" />
+    </fragment>
+
+</navigation>

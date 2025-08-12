@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Temple Vehicle Tracker</string>
+    <string name="login">Login</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="vehicles">Vehicles</string>
+    <string name="trip_setup">Trip Setup</string>
+    <string name="trip_tracking">Trip Tracking</string>
+    <string name="maintenance_logs">Maintenance Logs</string>
+    <string name="fuel_logs">Fuel Logs</string>
+</resources>
