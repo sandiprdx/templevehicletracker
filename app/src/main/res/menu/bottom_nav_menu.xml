@@ -1,17 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/vehicleListFragment"
-        android:title="@string/vehicles" />
-    <item
-        android:id="@+id/tripSetupFragment"
-        android:title="@string/trip_setup" />
-    <item
-        android:id="@+id/tripTrackingFragment"
-        android:title="@string/trip_tracking" />
-    <item
-        android:id="@+id/maintenanceLogFragment"
-        android:title="@string/maintenance_logs" />
-    <item
-        android:id="@+id/fuelLogFragment"
-        android:title="@string/fuel_logs" />
+    <item android:id="@+id/homeFragment" android:title="Home"/>
+    <item android:id="@+id/tripSetupFragment" android:title="@string/trip_setup"/>
+    <item android:id="@+id/tripTrackingFragment" android:title="@string/trip_tracking"/>
 </menu>

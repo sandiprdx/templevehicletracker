@@ -16,8 +16,8 @@ import androidx.navigation.fragment.findNavController
 import com.rxdindia.templevehicletracker.Network
 import com.rxdindia.templevehicletracker.R
 import com.rxdindia.templevehicletracker.SessionManager
+import com.rxdindia.templevehicletracker.data.TripRepository
 import com.rxdindia.templevehicletracker.databinding.FragmentTripSetupNewBinding
-import com.rxdindia.templevehicletracker.entity.Trip
 import com.rxdindia.templevehicletracker.util.ImageUriFactory
 import com.rxdindia.templevehicletracker.util.TripSession
 import kotlinx.coroutines.Dispatchers
@@ -30,32 +30,23 @@ class TripSetupNewFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var vehicleId: Int = -1
+    private var vehicleNumber: String? = null
     private var startKm: Double? = null
     private var photoUri: Uri? = null
     private var photoFile: File? = null
     private var destinationId: Int? = null
     private var customDestination: String? = null
 
-
-
-    // CAMERA permission
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) openCamera()
-        else Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_LONG).show()
+        if (granted) openCamera() else Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_LONG).show()
     }
 
-    // Take picture
     private val takePicture = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) {
-            Toast.makeText(requireContext(), "Meter photo saved: ${photoFile?.name}", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(requireContext(), "Camera cancelled", Toast.LENGTH_SHORT).show()
-        }
+        Toast.makeText(requireContext(), if (ok) "Meter photo saved" else "Camera cancelled", Toast.LENGTH_SHORT).show()
     }
 
-    private var vehicleNumber: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vehicleId = requireArguments().getInt("vehicleId")
@@ -67,20 +58,17 @@ class TripSetupNewFragment : Fragment() {
         return binding.root
     }
 
-    private fun now(): String = java.time.LocalDateTime.now().toString().replace('T',' ')
+    private fun now(): String = java.time.LocalDateTime.now().toString().replace('T', ' ')
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // If a trip is already active, send user to tracking
+        // Prevent starting another trip if active
         TripSession.activeTripId(requireContext())?.let {
             Toast.makeText(requireContext(), "Trip already active. End it first.", Toast.LENGTH_LONG).show()
-            findNavController().navigate(
-                R.id.action_tripSetupFragment_to_tripTrackingFragment,
-                bundleOf("tripId" to it)
-            )
+            findNavController().navigate(R.id.action_tripSetupFragment_to_tripTrackingFragment, bundleOf("tripId" to it))
             return
         }
 
-        // Populate destinations
+        // Load destinations
         lifecycleScope.launch {
             try {
                 val destinations = withContext(Dispatchers.IO) { Network.apiService.getDestinations() }
@@ -92,55 +80,52 @@ class TripSetupNewFragment : Fragment() {
                     }
                     override fun onNothingSelected(p0: android.widget.AdapterView<*>?) {}
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {}
         }
 
-        // Start meter photo
         binding.startMeterPhotoButton.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 openCamera()
             } else {
                 requestCameraPermission.launch(Manifest.permission.CAMERA)
             }
         }
 
-        // Start trip
         binding.startTripButton.setOnClickListener {
             startKm = binding.manualKmInput.text.toString().toDoubleOrNull()
             customDestination = binding.customDestinationInput.text?.toString()?.takeIf { it.isNotBlank() }
             val startTime = now()
-            val trip = Trip(
-                userId = SessionManager.getUserId(requireContext()),
-                vehicleId = vehicleId,
-                startTime = startTime,
-                destinationId = destinationId
-            )
 
             lifecycleScope.launch {
-                try {
-                    val created = withContext(Dispatchers.IO) { Network.apiService.createTrip(trip) }
-                    val serverId = created.tripId ?: -1
-                    TripSession.setActive(requireContext(), serverId, startKm, photoFile?.absolutePath,
-                        destinationId as Double? as Double?, customDestination, startTime)
-                    findNavController().navigate(
-                        R.id.action_tripSetupFragment_to_tripTrackingFragment,
-                        bundleOf("tripId" to serverId)
-                    )
-                } catch (_: Exception) {
-                    TripSession.setActive(requireContext(), -1, startKm, photoFile?.absolutePath, destinationId, customDestination, startTime)
-                    Toast.makeText(requireContext(), "Offline: tracking locally, will sync later", Toast.LENGTH_LONG).show()
-                    findNavController().navigate(
-                        R.id.action_tripSetupFragment_to_tripTrackingFragment,
-                        bundleOf("tripId" to -1)
-                    )
-                }
+                val serverId = TripRepository.startTripOnlineOrQueue(
+                    context = requireContext(),
+                    vehicleId = vehicleId,
+                    destinationId = destinationId,
+                    startMeter = startKm,
+                    startTime = startTime
+                )
+
+                TripSession.setActive(
+                    ctx = requireContext(),
+                    tripId = serverId,
+                    vehicleId = vehicleId,
+                    startKm = startKm,
+                    startPhoto = photoFile?.absolutePath,
+                    destId = destinationId,
+                    destCustom = customDestination,
+                    startTime = startTime
+                )
+
+                findNavController().navigate(
+                    R.id.action_tripSetupFragment_to_tripTrackingFragment,
+                    bundleOf("tripId" to serverId)
+                )
             }
         }
     }
 
     private fun openCamera() {
-        val created = ImageUriFactory.createImageUri(requireContext())
+        val created = ImageUriFactory.create(requireContext())
         photoUri = created.uri
         photoFile = created.file
         takePicture.launch(photoUri)

@@ -1,81 +1,46 @@
 package com.rxdindia.templevehicletracker
 
+import com.rxdindia.templevehicletracker.data.dto.*
 import com.rxdindia.templevehicletracker.entity.*
-import com.rxdindia.templevehicletracker.viewmodel.LoginResponse
-import com.rxdindia.templevehicletracker.network.*
 import retrofit2.http.*
 
 interface ApiService {
+    // Reads
+    @GET("api/destinations") suspend fun getDestinations(): List<Destination>
+    @GET("api/vehicles") suspend fun getVehicles(): List<Vehicle>
+    @GET("api/trips") suspend fun getTrips(): List<Trip>
+    @GET("api/fuel-logs") suspend fun getFuelLogs(): List<FuelLog>
+    @GET("api/maintenance-logs") suspend fun getMaintenanceLogs(): List<MaintenanceLog>
 
-    // --- Destinations ---
-    @GET("api/destinations")
-    suspend fun getDestinations(): List<Destination>
-
-    @POST("api/destinations")
-    suspend fun addDestination(@Body destination: Destination): Destination
-
-    // --- Vehicles ---
-    @GET("api/vehicles")
-    suspend fun getVehicles(): List<Vehicle>
-
-    @POST("api/vehicles")
-    suspend fun addVehicle(@Body vehicle: Vehicle): Vehicle
-
-    // --- Users / Login ---
-    @GET("api/users")
-    suspend fun getUsers(): List<User>
-
+    // Login
     @GET("api/login")
     suspend fun login(
         @Query("username") username: String,
         @Query("password") password: String
-    ): LoginResponse
+    ): com.rxdindia.templevehicletracker.viewmodel.LoginResponse
 
-    // --- Trips ---
+    // Trip create/update (DTO-shaped to match Spring entities)
     @POST("api/trips")
-    suspend fun createTrip(@Body body: TripCreateDto): TripResponseDto
+    suspend fun createTrip(@Body req: TripCreateRequest): TripResponse
 
-    @PUT("api/trips/{tripId}")
-    suspend fun updateTrip(
-        @Path("tripId") tripId: Int,
-        @Body body: TripUpdateDto
-    ): TripResponseDto
+    @PUT("api/trips/{id}")
+    suspend fun updateTrip(@Path("id") id: Int, @Body req: TripUpdateRequest): TripResponse
 
-    @GET("api/trips")
-    suspend fun getTrips(): List<Trip>
-
-    // --- Trip Details (breadcrumb points) ---
-    @POST("api/trip-details")
-    suspend fun addTripDetail(@Body body: TripDetailCreateDto): Unit
-
-    @GET("api/trip-details")
-    suspend fun getTripDetails(): List<TripDetail>
-
-    // --- Fuel ---
+    // Fuel/Maint/TripDetail (DTOs)
     @POST("api/fuel-logs")
-    suspend fun createFuelLog(@Body body: FuelLogCreateDto): FuelLog
+    suspend fun createFuel(@Body req: FuelLogCreateRequest): FuelLogResponse
 
-    @GET("api/fuel-logs")
-    suspend fun getFuelLogs(): List<FuelLog>
-
-    // --- Maintenance ---
     @POST("api/maintenance-logs")
-    suspend fun createMaintenanceLog(@Body body: MaintenanceLogCreateDto): MaintenanceLog
+    suspend fun createMaintenance(@Body req: MaintenanceLogCreateRequest): MaintenanceLogResponse
 
-    @GET("api/maintenance-logs")
-    suspend fun getMaintenanceLogs(): List<MaintenanceLog>
+    @POST("api/trip-details")
+    suspend fun createTripDetail(@Body req: TripDetailCreateRequest): TripDetailResponse
 
-    // --- Live Location & Admin Poll ---
+    // Location ping (optional)
     @POST("api/locations")
     suspend fun sendLocation(
         @Query("userId") userId: Int,
-        @Query("latitude") latitude: Double,
-        @Query("longitude") longitude: Double
-    ): Boolean
-
-    @GET("api/location-requests/exists")
-    suspend fun checkLocationRequestExists(
-        @Query("userId") userId: Int,
-        @Query("active") active: Boolean = true
+        @Query("latitude") lat: Double,
+        @Query("longitude") lon: Double
     ): Boolean
 }

@@ -1,164 +1,143 @@
 package com.rxdindia.templevehicletracker.data
 
+import android.content.Context
 import com.rxdindia.templevehicletracker.Network
 import com.rxdindia.templevehicletracker.SessionManager
-import com.rxdindia.templevehicletracker.entity.FuelLog
-import com.rxdindia.templevehicletracker.entity.MaintenanceLog
-import com.rxdindia.templevehicletracker.network.*
+import com.rxdindia.templevehicletracker.TVTApp
+import com.rxdindia.templevehicletracker.data.dto.*
 import com.rxdindia.templevehicletracker.sync.PendingFuel
 import com.rxdindia.templevehicletracker.sync.PendingMaintenance
-import com.rxdindia.templevehicletracker.TVTApp
+import com.rxdindia.templevehicletracker.sync.PendingTripDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 object TripRepository {
 
-    private val dateFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
     suspend fun startTripOnlineOrQueue(
+        context: Context,
         vehicleId: Int,
         destinationId: Int?,
-        startMeter: Double?
-    ): Int /* tripId or -1 if queued */ = withContext(Dispatchers.IO) {
-        val userId = SessionManager.getUserId(TVTApp.db.context)
-        try {
-            val created = Network.apiService.createTrip(
-                TripCreateDto(
-                    user = UserRef(userId),
-                    vehicle = VehicleRef(vehicleId),
-                    destination = destinationId?.let { DestinationRef(it) },
-                    startMeterReading = startMeter
+        startMeter: Double?,
+        startTime: String
+    ): Int = withContext(Dispatchers.IO) {
+        val userId = SessionManager.getUserId(context).takeIf { it > 0 }
+            ?: throw IllegalStateException("No logged in user")
+
+        return@withContext try {
+            val res = Network.apiService.createTrip(
+                TripCreateRequest(
+                    startMeterReading = startMeter,
+                    startTime = startTime,
+                    status = "in_progress",
+                    destination = destinationId?.let { RefDestination(it) },
+                    user = RefUser(userId),
+                    vehicle = RefVehicle(vehicleId)
                 )
             )
-            created.tripId ?: -1
+            res.tripId ?: -1
         } catch (_: Exception) {
-            // offline: queue nothing for start (we’ll create on submit page if still offline)
             -1
         }
     }
 
-    suspend fun finishTripOnlineOrQueue(
-        tripId: Int,
-        vehicleId: Int,
-        userId: Int,
-        endMeter: Double?,
-        totalDistance: Double?,
-        markCompleted: Boolean
-    ) = withContext(Dispatchers.IO) {
-        val status = if (markCompleted) "completed" else null
-        try {
-            if (tripId > 0) {
-                Network.apiService.updateTrip(
-                    tripId,
-                    TripUpdateDto(
-                        user = UserRef(userId),
-                        vehicle = VehicleRef(vehicleId),
-                        endMeterReading = endMeter,
-                        totalDistance = totalDistance,
-                        status = status
-                        // endTime omitted -> stays null; add if you want to set now()
-                    )
-                )
-            } else {
-                // No server trip id. You could create a final Trip now or just rely on RecentTrip.
-            }
-        } catch (_: Exception) {
-            // queue a local “pending finish” if you want (not shown here)
-        }
-    }
-
     suspend fun addFuelOnlineOrQueue(
-        tripId: Int?,
-        vehicleId: Int,
+        context: Context,
         quantity: Double,
         cost: Double,
-        meterReading: Double,
-        fuelType: String? = null
-    ): FuelLog = withContext(Dispatchers.IO) {
-        val body = FuelLogCreateDto(
-            vehicle = VehicleRef(vehicleId),
-            trip = tripId?.let { TripRef(it) },
-            fuelDate = LocalDate.now().format(dateFmt),
-            quantity = quantity,
-            cost = cost,
-            meterReading = meterReading,
-            fuelType = fuelType
-        )
+        vehicleId: Int,
+        tripId: Int?
+    ) = withContext(Dispatchers.IO) {
         try {
-            Network.apiService.createFuelLog(body)
-        } catch (_: Exception) {
-            TVTApp.db.pendingFuelDao().insert(
-                PendingFuel(
-                    vehicleId = vehicleId,
-                    tripId = tripId,
-                    fuelDate = body.fuelDate,
+            Network.apiService.createFuel(
+                FuelLogCreateRequest(
+                    fuelDate = nowDate(),
                     quantity = quantity,
                     cost = cost,
-                    meterReading = meterReading,
-                    fuelType = fuelType
+                    vehicle = RefVehicle(vehicleId),
+                    trip = tripId?.takeIf { it > 0 }?.let { TripRef(it) }
                 )
             )
-            // return a fake object for UI
-            FuelLog(
-                fuelId = null,
-                vehicleId = vehicleId,
-                fuelDate = body.fuelDate,
-                quantity = quantity,
-                cost = cost,
-                meterReading = meterReading,
-                fuelType = fuelType,
-                tripId = tripId
+        } catch (_: Exception) {
+            TVTApp.db.pendingFuelDao().insert(
+                PendingFuel(quantity = quantity, cost = cost, vehicleId = vehicleId, tripId = tripId)
             )
         }
     }
 
     suspend fun addMaintenanceOnlineOrQueue(
-        vehicleId: Int,
+        context: Context,
         description: String,
-        cost: Double
-    ): MaintenanceLog = withContext(Dispatchers.IO) {
-        val body = MaintenanceLogCreateDto(
-            vehicle = VehicleRef(vehicleId),
-            maintenanceDate = LocalDate.now().format(dateFmt),
-            description = description,
-            cost = cost
-        )
+        cost: Double,
+        vehicleId: Int
+    ) = withContext(Dispatchers.IO) {
         try {
-            Network.apiService.createMaintenanceLog(body)
-        } catch (_: Exception) {
-            TVTApp.db.pendingMaintenanceDao().insert(
-                PendingMaintenance(
-                    vehicleId = vehicleId,
-                    maintenanceDate = body.maintenanceDate,
+            Network.apiService.createMaintenance(
+                MaintenanceLogCreateRequest(
+                    maintenanceDate = nowDate(),
                     description = description,
-                    cost = cost
+                    cost = cost,
+                    vehicle = RefVehicle(vehicleId)
                 )
             )
-            MaintenanceLog(
-                maintenanceId = null,
-                vehicleId = vehicleId,
-                maintenanceDate = body.maintenanceDate,
-                description = description,
-                cost = cost
+        } catch (_: Exception) {
+            TVTApp.db.pendingMaintenanceDao().insert(
+                PendingMaintenance(description = description, cost = cost, vehicleId = vehicleId)
             )
         }
     }
 
-    suspend fun addTripPointIfOnline(tripId: Int, lat: Double, lon: Double, speed: Double?) =
-        withContext(Dispatchers.IO) {
+    suspend fun pushTripPointOnlineOrQueue(
+        context: Context,
+        tripId: Int?,
+        lat: Double,
+        lon: Double,
+        speed: Double?
+    ) = withContext(Dispatchers.IO) {
+        if (tripId != null && tripId > 0) {
             try {
-                Network.apiService.addTripDetail(
-                    TripDetailCreateDto(
-                        trip = TripRef(tripId),
+                Network.apiService.createTripDetail(
+                    TripDetailCreateRequest(
+                        timestamp = nowDateTime(),
                         latitude = lat,
                         longitude = lon,
-                        speed = speed
+                        speed = speed,
+                        trip = TripRef(tripId)
                     )
                 )
             } catch (_: Exception) {
-                // If you want, create a PendingTripDetail table and queue (not implemented here)
+                TVTApp.db.pendingTripDetailDao().insert(
+                    PendingTripDetail(tripId = tripId, latitude = lat, longitude = lon, speed = speed)
+                )
+            }
+        } else {
+            TVTApp.db.pendingTripDetailDao().insert(
+                PendingTripDetail(tripId = -1, latitude = lat, longitude = lon, speed = speed)
+            )
+        }
+    }
+
+    suspend fun finishTripOnline(
+        tripId: Int,
+        endMeter: Double?,
+        totalDistance: Double?
+    ) = withContext(Dispatchers.IO) {
+        if (tripId > 0) {
+            try {
+                Network.apiService.updateTrip(
+                    tripId,
+                    TripUpdateRequest(
+                        endMeterReading = endMeter,
+                        endTime = nowDateTime(),
+                        totalDistance = totalDistance,
+                        status = "completed"
+                    )
+                )
+            } catch (_: Exception) {
+                // optional: queue a pending trip update table
             }
         }
+    }
+
+    private fun nowDate(): String = java.time.LocalDate.now().toString()
+    private fun nowDateTime(): String = java.time.LocalDateTime.now().toString().replace('T', ' ')
 }

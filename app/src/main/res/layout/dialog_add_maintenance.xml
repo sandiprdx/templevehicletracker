@@ -5,16 +5,12 @@
 
     <EditText
         android:id="@+id/desc"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:hint="Description"
-        android:inputType="textCapSentences|textMultiLine" />
-
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
     <EditText
         android:id="@+id/cost"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:hint="Cost (₹)"
         android:inputType="numberDecimal"
-        android:layout_marginTop="12dp" />
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
 </LinearLayout>

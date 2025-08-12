@@ -18,18 +18,17 @@
         android:name="com.rxdindia.templevehicletracker.ui.TripSetupNewFragment"
         android:label="@string/trip_setup">
         <argument android:name="vehicleId" app:argType="integer"/>
-        <argument android:name="vehicleNumber" app:argType="string"/>  <!-- NEW -->
+        <argument android:name="vehicleNumber" app:argType="string"/>
         <action
             android:id="@+id/action_tripSetupFragment_to_tripTrackingFragment"
-            app:destination="@id/tripTrackingFragment"/>
+            app:destination="@id/tripTrackingFragment" />
     </fragment>
-
 
     <fragment
         android:id="@+id/tripTrackingFragment"
         android:name="com.rxdindia.templevehicletracker.ui.TripTrackingNewFragment"
         android:label="@string/trip_tracking">
-        <argument android:name="tripId" app:argType="integer" />
+        <argument android:name="tripId" app:argType="integer"/>
         <action
             android:id="@+id/action_tripTrackingFragment_to_endTripFragment"
             app:destination="@id/endTripFragment" />
@@ -39,7 +38,7 @@
         android:id="@+id/endTripFragment"
         android:name="com.rxdindia.templevehicletracker.ui.EndTripFragment"
         android:label="End Trip">
-        <argument android:name="tripId" app:argType="integer" />
+        <argument android:name="tripId" app:argType="integer"/>
         <action
             android:id="@+id/action_endTripFragment_to_tripSummaryFragment"
             app:destination="@id/tripSummaryFragment" />
@@ -50,6 +49,6 @@
         android:name="com.rxdindia.templevehicletracker.ui.TripSummaryFragment"
         android:label="Trip Summary">
         <argument android:name="tripId" app:argType="integer" />
+        <argument android:name="endKm" app:argType="float" android:defaultValue="0"/>
     </fragment>
-
 </navigation>
